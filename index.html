@@ -558,6 +558,7 @@
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
+    console.log("Script de módulo iniciado."); // LOG INICIAL DEL SCRIPT
 
     // --- Firebase Configuration ---
     const firebaseConfig = {
@@ -577,6 +578,7 @@
     const storage = getStorage(app);
     const analytics = getAnalytics(app);
     setLogLevel('error');
+    console.log("Firebase inicializado."); // LOG FIREBASE INIT
 
     const appId = firebaseConfig.appId;
     const appIdDisplayElement = document.getElementById('appIdDisplay');
@@ -665,12 +667,12 @@
     const tablaCategoryLabel = document.getElementById('tablaCategoryLabel');
     const destacadosCategoryLabel = document.getElementById('destacadosCategoryLabel');
     const registroCategoryLabel = document.getElementById('registroCategoryLabel');
-    const navLogoContainer = document.getElementById('navLogoContainer'); // ID para el logo de la navbar
+    const navLogoContainer = document.getElementById('navLogoContainer');
 
     const navLinks = document.querySelectorAll('.nav-link');
     const contentSections = document.querySelectorAll('.content-section');
-    // console.log('navLinks initialized at top level:', navLinks ? navLinks.length : 'null or undefined');
-    // console.log('contentSections initialized at top level:', contentSections ? contentSections.length : 'null or undefined');
+    console.log('navLinks (global):', navLinks ? navLinks.length : 'null/undefined', navLinks);
+    console.log('contentSections (global):', contentSections ? contentSections.length : 'null/undefined', contentSections);
 
 
     // --- UI Update Functions ---
@@ -678,6 +680,7 @@
     function showMessage(title, message, type = 'info') { /* ... (sin cambios) ... */ }
     async function showConfirmation(title, message) { /* ... (sin cambios) ... */ }
 
+    console.log("Definiendo updateCategoryLabels...");
     function updateCategoryLabels() {
         // console.log("updateCategoryLabels llamada. Categoría seleccionada:", selectedCategory);
         const labelsAndIds = [
@@ -694,11 +697,14 @@
             }
         });
     }
+    console.log("updateCategoryLabels definida.");
+
 
     // --- Firebase Authentication & User Setup ---
     onAuthStateChanged(auth, async (user) => {
-        let appInitializationSuccessful = false; // Bandera para controlar si la app se mostró
+        let appInitializationSuccessful = false;
         showLoading(true, "Autenticando...");
+        console.log("onAuthStateChanged - User:", user ? user.uid : "No user");
         try {
             if (user) {
                 currentUser = user;
@@ -715,37 +721,36 @@
                 appLogoutBtn.classList.remove('hidden');
 
                 const organizerDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/organizerProfile/profile`);
-                console.log("Ruta perfil organizador:", organizerDocRef.path);
+                console.log("onAuthStateChanged - Ruta perfil organizador:", organizerDocRef.path);
                 const organizerDoc = await getDoc(organizerDocRef);
                 if (!organizerDoc.exists()) {
-                    console.log("Creando perfil de organizador y torneo por defecto...");
+                    console.log("onAuthStateChanged - Creando perfil de organizador y torneo por defecto...");
                     await setDoc(organizerDocRef, { name: user.displayName, email: user.email, createdAt: Timestamp.now() });
                     const tournamentColRef = collection(db, `/artifacts/${appId}/users/${user.uid}/tournaments`);
                     const newTournamentRef = await addDoc(tournamentColRef, { name: "Mi Primer Torneo", organizerId: user.uid, createdAt: Timestamp.now(), categories: ["A", "B", "C"] });
                     currentTournamentId = newTournamentRef.id;
-                    console.log("Nuevo torneo por defecto creado. ID:", currentTournamentId);
+                    console.log("onAuthStateChanged - Nuevo torneo por defecto creado. ID:", currentTournamentId);
                 } else {
-                    console.log("Perfil de organizador existe. Buscando torneos...");
+                    console.log("onAuthStateChanged - Perfil de organizador existe. Buscando torneos...");
                     const tournamentsQuery = query(collection(db, `/artifacts/${appId}/users/${user.uid}/tournaments`));
                     const tournamentSnapshot = await getDocs(tournamentsQuery);
                     if (!tournamentSnapshot.empty) {
                         currentTournamentId = tournamentSnapshot.docs[0].id;
-                        console.log("Torneo existente cargado. ID:", currentTournamentId);
+                        console.log("onAuthStateChanged - Torneo existente cargado. ID:", currentTournamentId);
                     } else {
-                        console.log("Organizador existe pero no tiene torneos. Creando torneo por defecto...");
+                        console.log("onAuthStateChanged - Organizador existe pero no tiene torneos. Creando torneo por defecto...");
                         const tournamentColRef = collection(db, `/artifacts/${appId}/users/${user.uid}/tournaments`);
                         const newTournamentRef = await addDoc(tournamentColRef, { name: "Mi Torneo (Auto)", organizerId: user.uid, createdAt: Timestamp.now(), categories: ["A", "B", "C"] });
                         currentTournamentId = newTournamentRef.id;
-                        console.log("Nuevo torneo por defecto creado para organizador existente. ID:", currentTournamentId);
+                        console.log("onAuthStateChanged - Nuevo torneo por defecto creado para organizador existente. ID:", currentTournamentId);
                     }
                 }
 
                 if (!currentTournamentId && userRole === 'admin') {
-                     console.error("CRÍTICO: currentTournamentId no se estableció para admin.");
+                     console.error("CRÍTICO en onAuthStateChanged: currentTournamentId no se estableció para admin.");
                      showMessage("Error Crítico", "No se pudo determinar el torneo activo. Por favor, recarga o contacta a soporte.", "error");
-                     // appInitializationSuccessful permanecerá false
                 } else {
-                    console.log("Preparando para mostrar la aplicación. currentTournamentId:", currentTournamentId);
+                    console.log("onAuthStateChanged - Preparando para mostrar la aplicación. currentTournamentId:", currentTournamentId);
                     await showApp();
                     appInitializationSuccessful = true;
                 }
@@ -753,7 +758,7 @@
                 currentUser = null;
                 userRole = 'guest';
                 guestViewingOrganizerId = null;
-                currentTournamentId = 'public'; // Default for guests
+                currentTournamentId = 'public';
                 userNameSpan.textContent = '';
                 userIdDisplaySpan.textContent = '';
                 loggedInUserNameNav.classList.add('hidden');
@@ -762,47 +767,67 @@
                 userInfoDiv.classList.add('hidden');
                 mainLogoutBtn.classList.add('hidden');
                 appLogoutBtn.classList.add('hidden');
-                showLoginScreen(); // Hide app content, show login
+                showLoginScreen();
             }
         } catch (error) {
             console.error("Error CRÍTICO en onAuthStateChanged:", error);
             showMessage("Error de Autenticación", `Ocurrió un error inesperado: ${error.message}. Intenta recargar.`, "error");
-            showLoginScreen(); // Fallback to login screen on critical error
+            showLoginScreen();
         } finally {
-            // Ocultar el loading de "Autenticando..." solo si la app no se mostró
-            // o si es un invitado y la pantalla de login ya está (para evitar doble ocultamiento)
             if (!appInitializationSuccessful) {
                 showLoading(false);
             }
-            // Si showApp() fue llamado, él se encarga de su propio showLoading(false)
         }
     });
 
-    loginWithGoogleBtn.addEventListener('click', () => { /* ... (sin cambios) ... */ });
-    guestAccessBtn.addEventListener('click', async () => { /* ... (sin cambios) ... */ });
-
-    function handleLogout() {
-        signOut(auth).catch((error) => {
-            console.error("Error al cerrar sesión:", error);
-            showMessage("Error", "No se pudo cerrar la sesión completamente.", "error");
+    if (loginWithGoogleBtn) {
+        loginWithGoogleBtn.addEventListener('click', () => {
+            console.log("loginWithGoogleBtn clicked"); // LOG BOTÓN
+            authErrorP.classList.add('hidden');
+            showLoading(true, "Iniciando sesión con Google...");
+            const provider = new GoogleAuthProvider();
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    console.log("Google sign-in successful, result:", result);
+                    // onAuthStateChanged se encargará del resto
+                })
+                .catch((error) => {
+                    console.error("Error en inicio de sesión con Google:", error);
+                    authErrorP.textContent = `Error Google: ${error.code}. Intenta de nuevo.`;
+                    authErrorP.classList.remove('hidden');
+                    showLoading(false);
+                });
         });
-        // onAuthStateChanged se encargará de llamar a showLoginScreen
+    } else {
+        console.error("Elemento loginWithGoogleBtn no encontrado.");
     }
+
+    if (guestAccessBtn) {
+        guestAccessBtn.addEventListener('click', async () => {
+            console.log("guestAccessBtn clicked"); // LOG BOTÓN
+            userRole = 'guest';
+            currentTournamentId = 'public';
+            guestViewingOrganizerId = null;
+            console.log("Acceso como invitado. currentTournamentId:", currentTournamentId);
+            showLoading(true, "Cargando como invitado...");
+            try {
+                await showApp();
+            } catch (error) {
+                console.error("Error al mostrar la app como invitado:", error);
+                showMessage("Error", "No se pudo cargar la vista de invitado.", "error");
+                showLoading(false);
+            }
+        });
+    } else {
+        console.error("Elemento guestAccessBtn no encontrado.");
+    }
+
+
+    function handleLogout() { /* ... (sin cambios) ... */ }
     mainLogoutBtn.addEventListener('click', handleLogout);
     appLogoutBtn.addEventListener('click', handleLogout);
 
-    // Event listener para el logo de la navbar
-    if (navLogoContainer) {
-        navLogoContainer.addEventListener('click', () => {
-            console.log("Clic en el logo de la navbar.");
-            if (currentUser) {
-                handleLogout(); // Cierra sesión si hay un usuario activo
-            }
-            showLoginScreen(); // Siempre muestra la pantalla de login
-        });
-    } else {
-        console.error("Elemento navLogoContainer no encontrado.");
-    }
+    if (navLogoContainer) { /* ... (sin cambios) ... */ } else { console.error("Elemento navLogoContainer no encontrado."); }
 
 
     function showLoginScreen() { /* ... (sin cambios) ... */ }
@@ -845,8 +870,7 @@
     // --- Navigation and UI ---
     function showTab(tabId, isInitialLoadOrCategoryChange = false) {
         console.log(`Mostrando pestaña: ${tabId}, Carga inicial/Categoría: ${isInitialLoadOrCategoryChange}`);
-        // console.log('showTab: typeof navLinks:', typeof navLinks, navLinks ? navLinks.length : 'N/A');
-        // console.log('showTab: typeof contentSections:', typeof contentSections, contentSections ? contentSections.length : 'N/A');
+        // console.log('showTab: navLinks:', navLinks ? navLinks.length : 'N/A', 'contentSections:', contentSections ? contentSections.length : 'N/A');
 
         if (!contentSections || typeof contentSections.forEach !== 'function') {
             console.error("CRITICAL: contentSections no está disponible o no es iterable en showTab!");
@@ -867,13 +891,13 @@
         const mobileMenuEl = document.getElementById('mobile-menu');
         if (mobileMenuEl && !mobileMenuEl.classList.contains('hidden')) mobileMenuEl.classList.add('hidden');
 
-        if (appContent && !appContent.classList.contains('hidden')) {
-            if (!isInitialLoadOrCategoryChange) {
-                 renderAll().catch(error => {
-                    console.error("Error al renderizar pestaña (clic normal):", tabId, error);
-                    showMessage("Error de Visualización", "No se pudo actualizar la vista completamente.", "error");
-                });
-            }
+        // Llamar a renderAll solo si no es la carga inicial O un cambio de categoría,
+        // ya que showApp y el listener de categoryOptions ya llaman a renderAll.
+        if (appContent && !appContent.classList.contains('hidden') && !isInitialLoadOrCategoryChange) {
+             renderAll().catch(error => {
+                console.error("Error al renderizar pestaña (clic normal):", tabId, error);
+                showMessage("Error de Visualización", "No se pudo actualizar la vista completamente.", "error");
+            });
         }
 
         if (tabId === 'registro' && userRole === 'admin') {
@@ -881,13 +905,12 @@
             clearPlayerStatsInputs();
             populateTeamSelects();
         } else if (tabId === 'registro' && userRole === 'guest') {
-            showTab('dashboard', true);
+            showTab('dashboard', true); // Evitar bucle y asegurar que es tratado como carga de datos
             return;
         }
     }
 
-    // Setup event listeners for navLinks
-    // console.log('Global event listeners setup: typeof navLinks:', typeof navLinks, navLinks ? navLinks.length : 'N/A');
+    // console.log('Configurando event listeners para navLinks:', navLinks ? navLinks.length : 'N/A');
     if (navLinks && typeof navLinks.forEach === 'function') {
         navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
@@ -896,7 +919,7 @@
                 if (tabId === 'registro' && userRole !== 'admin') {
                     return;
                 }
-                showTab(tabId, false);
+                showTab(tabId, false); // false indica que es un clic normal
             });
         });
     } else {
@@ -911,17 +934,17 @@
         console.log("renderAll() llamado. Rol:", userRole, "TorneoID:", currentTournamentId, "Org Invitado:", guestViewingOrganizerId);
         if (userRole === 'admin' && (!currentUser || !currentTournamentId)) {
             console.warn("renderAll para admin abortado: currentUser o currentTournamentId no están listos.");
-            showLoading(false); // Asegurarse de ocultar el loading si se aborta aquí
-            return Promise.reject(new Error("Datos de administrador incompletos para renderAll.")); // Devolver una promesa rechazada
+            showLoading(false);
+            return Promise.reject(new Error("Datos de administrador incompletos para renderAll."));
         }
-        if (userRole === 'guest' && !currentTournamentId) { // 'public' es un ID válido para invitados
-            console.warn("renderAll para invitado abortado: currentTournamentId no está listo (no es 'public' ni un ID específico).");
+        if (userRole === 'guest' && !currentTournamentId) {
+            console.warn("renderAll para invitado abortado: currentTournamentId no está listo.");
             showLoading(false);
             return Promise.reject(new Error("Datos de invitado incompletos para renderAll."));
         }
 
         showLoading(true, "Actualizando datos...");
-        updateCategoryLabels();
+        updateCategoryLabels(); // Llamar aquí para asegurar que las etiquetas se actualicen antes de renderizar contenido
         const activeTab = document.querySelector('.nav-link.tab-active')?.dataset?.tab || 'dashboard';
 
         try {
@@ -948,9 +971,9 @@
         } catch (error) {
             console.error("Error durante las tareas de renderAll:", error);
             showMessage("Error de Renderizado", `No se pudieron actualizar todos los datos: ${error.message}`, "error");
-            throw error; // Re-lanzar para que el .catch de showApp lo maneje
+            throw error;
         } finally {
-            // showLoading(false) se maneja en el finally de showApp
+            // showLoading(false) se maneja en el finally de showApp o en el callback del botón de invitado
         }
     }
 
@@ -962,12 +985,9 @@
     });
 
     // --- Funciones de renderizado individuales (renderTeams, renderTable, etc.) ---
-    // ... (sin cambios significativos, pero asegurar que el manejo de showLoading sea consistente
-    //      o que renderAll lo maneje centralmente como se está haciendo ahora)
-
     async function renderTeams() {
         if (!listaEquiposContainer) return;
-        // showLoading(true, "Cargando equipos..."); // Manejado por renderAll
+        // showLoading(true, "Cargando equipos..."); // Ya manejado por renderAll
         try {
             const teamsToRender = await fetchTeams(selectedCategory);
             listaEquiposContainer.innerHTML = '';
@@ -1004,12 +1024,12 @@
             console.error("Error en renderTeams:", error);
             showMessage("Error", "No se pudieron cargar los equipos.", "error");
         }
-        // finally { showLoading(false); } // Manejado por renderAll
+        // finally { showLoading(false); } // Manejado por renderAll o showApp
     }
-    async function renderTable() { /* ... (como estaba, pero usando showLoading si renderAll no lo hace) ... */ }
-    async function renderDashboardSummaries() { /* ... (como estaba, usando await fetch... */ }
-    async function renderGames(filteredGames = null) { /* ... (como estaba, usando await fetch... */ }
-    async function renderFeaturedPlayers() { /* ... (como estaba, usando await fetch... */ }
+    async function renderTable() { /* ... (como estaba) ... */ }
+    async function renderDashboardSummaries() { /* ... (como estaba) ... */ }
+    async function renderGames(filteredGames = null) { /* ... (como estaba) ... */ }
+    async function renderFeaturedPlayers() { /* ... (como estaba) ... */ }
 
 </script>
 </body>
