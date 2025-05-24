@@ -558,7 +558,7 @@
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
 
-    console.log("Script de módulo iniciado."); // LOG INICIAL DEL SCRIPT
+    console.log("Script de módulo iniciado.");
 
     // --- Firebase Configuration ---
     const firebaseConfig = {
@@ -578,7 +578,7 @@
     const storage = getStorage(app);
     const analytics = getAnalytics(app);
     setLogLevel('error');
-    console.log("Firebase inicializado."); // LOG FIREBASE INIT
+    console.log("Firebase inicializado.");
 
     const appId = firebaseConfig.appId;
     const appIdDisplayElement = document.getElementById('appIdDisplay');
@@ -671,8 +671,8 @@
 
     const navLinks = document.querySelectorAll('.nav-link');
     const contentSections = document.querySelectorAll('.content-section');
-    console.log('navLinks (global):', navLinks ? navLinks.length : 'null/undefined', navLinks);
-    console.log('contentSections (global):', contentSections ? contentSections.length : 'null/undefined', contentSections);
+    console.log('navLinks (global):', navLinks ? navLinks.length : 'null/undefined');
+    console.log('contentSections (global):', contentSections ? contentSections.length : 'null/undefined');
 
 
     // --- UI Update Functions ---
@@ -748,7 +748,10 @@
 
                 if (!currentTournamentId && userRole === 'admin') {
                      console.error("CRÍTICO en onAuthStateChanged: currentTournamentId no se estableció para admin.");
-                     showMessage("Error Crítico", "No se pudo determinar el torneo activo. Por favor, recarga o contacta a soporte.", "error");
+                     showMessage("Error Crítico de Configuración", "No se pudo determinar el torneo activo. Por favor, contacte a soporte.", "error");
+                     userInfoDiv.classList.add('hidden');
+                     authContainer.classList.remove('hidden');
+                     mainLogoutBtn.classList.add('hidden');
                 } else {
                     console.log("onAuthStateChanged - Preparando para mostrar la aplicación. currentTournamentId:", currentTournamentId);
                     await showApp();
@@ -782,20 +785,20 @@
 
     if (loginWithGoogleBtn) {
         loginWithGoogleBtn.addEventListener('click', () => {
-            console.log("loginWithGoogleBtn clicked"); // LOG BOTÓN
+            console.log("loginWithGoogleBtn clicked");
             authErrorP.classList.add('hidden');
             showLoading(true, "Iniciando sesión con Google...");
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider)
                 .then((result) => {
                     console.log("Google sign-in successful, result:", result);
-                    // onAuthStateChanged se encargará del resto
+                    // onAuthStateChanged se encargará del resto, incluido showLoading(false) a través de showApp
                 })
                 .catch((error) => {
                     console.error("Error en inicio de sesión con Google:", error);
                     authErrorP.textContent = `Error Google: ${error.code}. Intenta de nuevo.`;
                     authErrorP.classList.remove('hidden');
-                    showLoading(false);
+                    showLoading(false); // Asegurar que se oculte si hay error aquí
                 });
         });
     } else {
@@ -804,18 +807,18 @@
 
     if (guestAccessBtn) {
         guestAccessBtn.addEventListener('click', async () => {
-            console.log("guestAccessBtn clicked"); // LOG BOTÓN
+            console.log("guestAccessBtn clicked");
             userRole = 'guest';
             currentTournamentId = 'public';
             guestViewingOrganizerId = null;
             console.log("Acceso como invitado. currentTournamentId:", currentTournamentId);
-            showLoading(true, "Cargando como invitado...");
+            // showLoading(true, "Cargando como invitado..."); // showApp se encargará del loading
             try {
                 await showApp();
             } catch (error) {
                 console.error("Error al mostrar la app como invitado:", error);
                 showMessage("Error", "No se pudo cargar la vista de invitado.", "error");
-                showLoading(false);
+                showLoading(false); // Asegurar que se oculte si showApp falla
             }
         });
     } else {
@@ -891,8 +894,6 @@
         const mobileMenuEl = document.getElementById('mobile-menu');
         if (mobileMenuEl && !mobileMenuEl.classList.contains('hidden')) mobileMenuEl.classList.add('hidden');
 
-        // Llamar a renderAll solo si no es la carga inicial O un cambio de categoría,
-        // ya que showApp y el listener de categoryOptions ya llaman a renderAll.
         if (appContent && !appContent.classList.contains('hidden') && !isInitialLoadOrCategoryChange) {
              renderAll().catch(error => {
                 console.error("Error al renderizar pestaña (clic normal):", tabId, error);
@@ -905,7 +906,7 @@
             clearPlayerStatsInputs();
             populateTeamSelects();
         } else if (tabId === 'registro' && userRole === 'guest') {
-            showTab('dashboard', true); // Evitar bucle y asegurar que es tratado como carga de datos
+            showTab('dashboard', true);
             return;
         }
     }
@@ -919,7 +920,7 @@
                 if (tabId === 'registro' && userRole !== 'admin') {
                     return;
                 }
-                showTab(tabId, false); // false indica que es un clic normal
+                showTab(tabId, false);
             });
         });
     } else {
@@ -944,7 +945,7 @@
         }
 
         showLoading(true, "Actualizando datos...");
-        updateCategoryLabels(); // Llamar aquí para asegurar que las etiquetas se actualicen antes de renderizar contenido
+        updateCategoryLabels();
         const activeTab = document.querySelector('.nav-link.tab-active')?.dataset?.tab || 'dashboard';
 
         try {
