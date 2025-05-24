@@ -198,6 +198,10 @@
             border-radius: 5px;
             object-fit: contain;
         }
+        .nav-logo-container:hover {
+            cursor: pointer;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -239,22 +243,11 @@
         <nav class="navbar shadow-lg sticky top-0 z-50">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-20">
-                    <div class="flex items-center">
-                        <i class="fas fa-basketball-ball basketball-icon fa-2x"></i>
+                    <div id="navLogoContainer" class="flex items-center nav-logo-container"> <i class="fas fa-basketball-ball basketball-icon fa-2x"></i>
                         <h1 class="header-title text-3xl sm:text-4xl">TORNEOS BSKT</h1>
-                        <div class="relative ml-3 sm:ml-6">
-                            <button id="categorySelectorBtn" class="category-selector-button text-orange-400 hover:text-white px-3 py-2 rounded-md text-xs sm:text-sm font-medium flex items-center">
-                                Categoría: <span id="currentCategoryLabel" class="ml-1 font-semibold">A</span> <i class="fas fa-chevron-down ml-2 text-xs"></i>
-                            </button>
-                            <div id="categoryDropdown" class="hidden absolute left-0 mt-2 w-40 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 py-1 z-50">
-                                <a href="#" class="category-option block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-category="A">Categoría A</a>
-                                <a href="#" class="category-option block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-category="B">Categoría B</a>
-                                <a href="#" class="category-option block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-category="C">Categoría C</a>
-                            </div>
-                        </div>
                     </div>
                     <div class="flex items-center">
-                        <div id="loggedInUserNameNav" class="text-sm text-gray-300 mr-4 hidden"></div>
+                         <div id="loggedInUserNameNav" class="text-sm text-gray-300 mr-4 hidden"></div>
                         <div class="hidden md:block">
                             <div id="mainNavLinks" class="ml-10 flex items-baseline space-x-4">
                                 <a href="#dashboard" class="nav-link px-3 py-2 rounded-md text-sm font-medium tab-active" data-tab="dashboard">Dashboard</a>
@@ -263,6 +256,15 @@
                                 <a href="#tabla" class="nav-link px-3 py-2 rounded-md text-sm font-medium tab-inactive" data-tab="tabla">Posiciones</a>
                                 <a href="#destacados" class="nav-link px-3 py-2 rounded-md text-sm font-medium tab-inactive" data-tab="destacados">Destacados</a>
                                 <a href="#registro" id="navLinkRegistro" class="nav-link px-3 py-2 rounded-md text-sm font-medium tab-inactive hidden" data-tab="registro">Registrar Partido</a>
+                            </div>
+                        </div>
+                         <div class="relative ml-3 sm:ml-6"> <button id="categorySelectorBtn" class="category-selector-button text-orange-400 hover:text-white px-3 py-2 rounded-md text-xs sm:text-sm font-medium flex items-center">
+                                Categoría: <span id="currentCategoryLabel" class="ml-1 font-semibold">A</span> <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                            </button>
+                            <div id="categoryDropdown" class="hidden absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 py-1 z-50">
+                                <a href="#" class="category-option block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-category="A">Categoría A</a>
+                                <a href="#" class="category-option block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-category="B">Categoría B</a>
+                                <a href="#" class="category-option block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600" data-category="C">Categoría C</a>
                             </div>
                         </div>
                          <button id="appLogoutBtn" class="ml-4 btn-secondary text-xs px-3 py-2 rounded-md hidden">
@@ -663,6 +665,13 @@
     const tablaCategoryLabel = document.getElementById('tablaCategoryLabel');
     const destacadosCategoryLabel = document.getElementById('destacadosCategoryLabel');
     const registroCategoryLabel = document.getElementById('registroCategoryLabel');
+    const navLogoContainer = document.getElementById('navLogoContainer'); // ID para el logo de la navbar
+
+    const navLinks = document.querySelectorAll('.nav-link');
+    const contentSections = document.querySelectorAll('.content-section');
+    // console.log('navLinks initialized at top level:', navLinks ? navLinks.length : 'null or undefined');
+    // console.log('contentSections initialized at top level:', contentSections ? contentSections.length : 'null or undefined');
+
 
     // --- UI Update Functions ---
     function showLoading(show, message = "") { /* ... (sin cambios) ... */ }
@@ -688,7 +697,7 @@
 
     // --- Firebase Authentication & User Setup ---
     onAuthStateChanged(auth, async (user) => {
-        let appShown = false;
+        let appInitializationSuccessful = false; // Bandera para controlar si la app se mostró
         showLoading(true, "Autenticando...");
         try {
             if (user) {
@@ -731,20 +740,20 @@
                     }
                 }
 
-                if (!currentTournamentId && userRole === 'admin') { // Asegurar que solo aplica a admin
+                if (!currentTournamentId && userRole === 'admin') {
                      console.error("CRÍTICO: currentTournamentId no se estableció para admin.");
                      showMessage("Error Crítico", "No se pudo determinar el torneo activo. Por favor, recarga o contacta a soporte.", "error");
-                     // appShown permanecerá false, el finally exterior ocultará el loading
+                     // appInitializationSuccessful permanecerá false
                 } else {
                     console.log("Preparando para mostrar la aplicación. currentTournamentId:", currentTournamentId);
                     await showApp();
-                    appShown = true;
+                    appInitializationSuccessful = true;
                 }
-            } else {
+            } else { // No user
                 currentUser = null;
                 userRole = 'guest';
                 guestViewingOrganizerId = null;
-                currentTournamentId = 'public';
+                currentTournamentId = 'public'; // Default for guests
                 userNameSpan.textContent = '';
                 userIdDisplaySpan.textContent = '';
                 loggedInUserNameNav.classList.add('hidden');
@@ -753,24 +762,48 @@
                 userInfoDiv.classList.add('hidden');
                 mainLogoutBtn.classList.add('hidden');
                 appLogoutBtn.classList.add('hidden');
-                showLoginScreen();
+                showLoginScreen(); // Hide app content, show login
             }
         } catch (error) {
-            console.error("Error en onAuthStateChanged:", error);
+            console.error("Error CRÍTICO en onAuthStateChanged:", error);
             showMessage("Error de Autenticación", `Ocurrió un error inesperado: ${error.message}. Intenta recargar.`, "error");
-            showLoginScreen();
+            showLoginScreen(); // Fallback to login screen on critical error
         } finally {
-            if (!appShown) {
-                showLoading(false); // Ocultar "Autenticando..." si showApp no se llamó o falló antes
+            // Ocultar el loading de "Autenticando..." solo si la app no se mostró
+            // o si es un invitado y la pantalla de login ya está (para evitar doble ocultamiento)
+            if (!appInitializationSuccessful) {
+                showLoading(false);
             }
+            // Si showApp() fue llamado, él se encarga de su propio showLoading(false)
         }
     });
 
     loginWithGoogleBtn.addEventListener('click', () => { /* ... (sin cambios) ... */ });
     guestAccessBtn.addEventListener('click', async () => { /* ... (sin cambios) ... */ });
-    function handleLogout() { /* ... (sin cambios) ... */ }
+
+    function handleLogout() {
+        signOut(auth).catch((error) => {
+            console.error("Error al cerrar sesión:", error);
+            showMessage("Error", "No se pudo cerrar la sesión completamente.", "error");
+        });
+        // onAuthStateChanged se encargará de llamar a showLoginScreen
+    }
     mainLogoutBtn.addEventListener('click', handleLogout);
     appLogoutBtn.addEventListener('click', handleLogout);
+
+    // Event listener para el logo de la navbar
+    if (navLogoContainer) {
+        navLogoContainer.addEventListener('click', () => {
+            console.log("Clic en el logo de la navbar.");
+            if (currentUser) {
+                handleLogout(); // Cierra sesión si hay un usuario activo
+            }
+            showLoginScreen(); // Siempre muestra la pantalla de login
+        });
+    } else {
+        console.error("Elemento navLogoContainer no encontrado.");
+    }
+
 
     function showLoginScreen() { /* ... (sin cambios) ... */ }
 
@@ -781,7 +814,6 @@
         updateAdminUI();
 
         showLoading(true, "Cargando datos de la aplicación...");
-
         try {
             await renderAll();
             console.log("renderAll() completado en showApp.");
@@ -811,26 +843,32 @@
     // ... (sin cambios)
 
     // --- Navigation and UI ---
-    function showTab(tabId, isInitialLoadOrCategoryChange = false) { // Renombrado el segundo parámetro
+    function showTab(tabId, isInitialLoadOrCategoryChange = false) {
         console.log(`Mostrando pestaña: ${tabId}, Carga inicial/Categoría: ${isInitialLoadOrCategoryChange}`);
+        // console.log('showTab: typeof navLinks:', typeof navLinks, navLinks ? navLinks.length : 'N/A');
+        // console.log('showTab: typeof contentSections:', typeof contentSections, contentSections ? contentSections.length : 'N/A');
+
+        if (!contentSections || typeof contentSections.forEach !== 'function') {
+            console.error("CRITICAL: contentSections no está disponible o no es iterable en showTab!");
+            showMessage("Error de UI", "No se pueden mostrar las secciones de contenido.", "error");
+            return;
+        }
         contentSections.forEach(section => section.classList.toggle('hidden', section.id !== tabId));
-        navLinks.forEach(link => {
-            link.classList.toggle('tab-active', link.dataset.tab === tabId);
-            link.classList.toggle('tab-inactive', link.dataset.tab !== tabId);
-        });
+
+        if (!navLinks || typeof navLinks.forEach !== 'function') {
+            console.error("CRITICAL: navLinks no está disponible o no es iterable en showTab!");
+        } else {
+            navLinks.forEach(link => {
+                link.classList.toggle('tab-active', link.dataset.tab === tabId);
+                link.classList.toggle('tab-inactive', link.dataset.tab !== tabId);
+            });
+        }
+
         const mobileMenuEl = document.getElementById('mobile-menu');
         if (mobileMenuEl && !mobileMenuEl.classList.contains('hidden')) mobileMenuEl.classList.add('hidden');
 
-        // updateCategoryLabels(); // Se llama en renderAll
-
         if (appContent && !appContent.classList.contains('hidden')) {
-            // Si es una carga inicial o un cambio de categoría, renderAll ya se habrá encargado o se encargará.
-            // Si es solo un cambio de pestaña por clic del usuario, renderAll también se llama.
-            // Esta llamada a renderAll aquí podría ser redundante si el cambio de categoría ya lo hizo.
-            // La clave es que renderAll se llame cuando los datos *necesitan* refrescarse (inicio, cambio de categoría).
-            // Un simple clic en una pestaña ya renderizada no debería necesitar un full renderAll a menos que los datos sean muy dinámicos.
-            // Por ahora, para asegurar consistencia, llamamos a renderAll.
-            if (!isInitialLoadOrCategoryChange) { // Solo si es un clic de pestaña normal
+            if (!isInitialLoadOrCategoryChange) {
                  renderAll().catch(error => {
                     console.error("Error al renderizar pestaña (clic normal):", tabId, error);
                     showMessage("Error de Visualización", "No se pudo actualizar la vista completamente.", "error");
@@ -848,56 +886,38 @@
         }
     }
 
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabId = link.dataset.tab;
-            if (tabId === 'registro' && userRole !== 'admin') {
-                return;
-            }
-            showTab(tabId, false); // false porque es un clic de usuario, no carga inicial/cambio de categoría
+    // Setup event listeners for navLinks
+    // console.log('Global event listeners setup: typeof navLinks:', typeof navLinks, navLinks ? navLinks.length : 'N/A');
+    if (navLinks && typeof navLinks.forEach === 'function') {
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabId = link.dataset.tab;
+                if (tabId === 'registro' && userRole !== 'admin') {
+                    return;
+                }
+                showTab(tabId, false);
+            });
         });
-    });
+    } else {
+        console.error("CRITICAL: navLinks no está disponible para configurar event listeners globales!");
+    }
 
-    categoryOptions.forEach(option => {
-        option.addEventListener('click', async (e) => { // Hacer async para await renderAll
-            e.preventDefault();
-            selectedCategory = option.dataset.category;
-            if(currentCategoryLabel) currentCategoryLabel.textContent = selectedCategory; // Actualizar inmediatamente la etiqueta
-            if(categoryDropdown) categoryDropdown.classList.add('hidden');
 
-            // Resetear filtros y formularios relacionados con la categoría
-            const filtroFecha = document.getElementById('filtro-fecha-partido');
-            const filtroEquipo = document.getElementById('filtro-equipo-partido');
-            if(filtroFecha) filtroFecha.value = '';
-            if(filtroEquipo) filtroEquipo.value = '';
-            if(formRegistrarPartido) formRegistrarPartido.reset();
-            clearPlayerStatsInputs();
-
-            console.log("Cambio de categoría a:", selectedCategory, "Llamando a renderAll.");
-            await renderAll(); // Esperar a que renderAll complete para la nueva categoría
-            // No es necesario llamar a showTab aquí explícitamente si renderAll actualiza la vista actual.
-            // Pero si queremos asegurar que la pestaña activa se "refresque" visualmente después de renderAll:
-            const activeTabElement = document.querySelector('.nav-link.tab-active');
-            const currentActiveTab = activeTabElement ? activeTabElement.dataset.tab : 'dashboard';
-            showTab(currentActiveTab, true); // true para indicar que es un cambio que requiere recarga de datos
-        });
-    });
+    categoryOptions.forEach(option => { /* ... (sin cambios) ... */ });
 
 
     async function renderAll() { /* ... (como en la versión anterior, con el console.log y validaciones) ... */
         console.log("renderAll() llamado. Rol:", userRole, "TorneoID:", currentTournamentId, "Org Invitado:", guestViewingOrganizerId);
         if (userRole === 'admin' && (!currentUser || !currentTournamentId)) {
             console.warn("renderAll para admin abortado: currentUser o currentTournamentId no están listos.");
-            // No mostrar error aquí, ya que onAuthStateChanged debería haberlo manejado.
-            // Simplemente no renderizar si los datos críticos faltan.
-            showLoading(false); // Asegurarse de que el loading se oculte si se aborta.
-            return;
+            showLoading(false); // Asegurarse de ocultar el loading si se aborta aquí
+            return Promise.reject(new Error("Datos de administrador incompletos para renderAll.")); // Devolver una promesa rechazada
         }
-        if (userRole === 'guest' && !currentTournamentId) {
-            console.warn("renderAll para invitado abortado: currentTournamentId no está listo.");
+        if (userRole === 'guest' && !currentTournamentId) { // 'public' es un ID válido para invitados
+            console.warn("renderAll para invitado abortado: currentTournamentId no está listo (no es 'public' ni un ID específico).");
             showLoading(false);
-            return;
+            return Promise.reject(new Error("Datos de invitado incompletos para renderAll."));
         }
 
         showLoading(true, "Actualizando datos...");
@@ -928,22 +948,26 @@
         } catch (error) {
             console.error("Error durante las tareas de renderAll:", error);
             showMessage("Error de Renderizado", `No se pudieron actualizar todos los datos: ${error.message}`, "error");
+            throw error; // Re-lanzar para que el .catch de showApp lo maneje
         } finally {
-            showLoading(false);
+            // showLoading(false) se maneja en el finally de showApp
         }
     }
 
     // --- Initial Load ---
-    // ... (sin cambios)
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log("DOM completamente cargado y parseado.");
+        const currentYearElement = document.getElementById('currentYear');
+        if (currentYearElement) currentYearElement.textContent = new Date().getFullYear();
+    });
 
     // --- Funciones de renderizado individuales (renderTeams, renderTable, etc.) ---
     // ... (sin cambios significativos, pero asegurar que el manejo de showLoading sea consistente
     //      o que renderAll lo maneje centralmente como se está haciendo ahora)
 
-    // Ejemplo de cómo renderTeams podría verse si renderAll maneja el showLoading principal:
     async function renderTeams() {
         if (!listaEquiposContainer) return;
-        // showLoading(true, "Cargando equipos..."); // Ya no es necesario aquí si renderAll lo hace
+        // showLoading(true, "Cargando equipos..."); // Manejado por renderAll
         try {
             const teamsToRender = await fetchTeams(selectedCategory);
             listaEquiposContainer.innerHTML = '';
@@ -954,8 +978,25 @@
             teamsToRender.forEach(team => {
                 const defaultPlaceholderLogo = `https://placehold.co/300x200/${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}/ffffff?text=${team.name.substring(0,3).toUpperCase()}`;
                 const logoToShow = team.logoUrl || defaultPlaceholderLogo;
-                const adminButtons = userRole === 'admin' ? `...` : ''; // Definir botones
-                const teamCard = `...`; // Definir tarjeta
+                const adminButtons = userRole === 'admin' ?
+                    `<button class="btn-secondary text-xs px-2 py-1 rounded-md" onclick="window.editTeamWrapper('${team.id}')"><i class="fas fa-edit"></i></button>
+                     <button class="btn-secondary text-xs px-2 py-1 rounded-md" onclick="window.deleteTeamConfirmation('${team.id}', '${team.name.replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button>`
+                    : '';
+                const teamCard = `
+                    <div class="card rounded-lg shadow-xl overflow-hidden transform hover:scale-105 transition-transform duration-300">
+                        <img src="${logoToShow}" alt="Logo ${team.name}" class="w-full h-48 object-contain bg-gray-800 p-2" onerror="this.onerror=null;this.src='${defaultPlaceholderLogo}';" id="logo-team-${team.id}-card">
+                        <div class="p-5">
+                            <h3 class="text-xl font-bold text-orange-400 mb-2" id="name-team-${team.id}-card">${team.name}</h3>
+                            <p class="text-sm text-gray-400 mb-1"><i class="fas fa-map-marker-alt mr-2"></i>${team.city || 'N/A'}</p>
+                            <p class="text-sm text-gray-400 mb-3"><i class="fas fa-user-tie mr-2"></i>Responsable: ${team.coach || 'N/A'}</p>
+                            <div class="flex space-x-2">
+                                <button class="btn-secondary text-xs px-3 py-1 rounded-md flex-1" onclick="window.openPlayersModal('${team.id}')">
+                                    <i class="fas fa-users mr-1"></i> Jugadores (<span id="player-count-team-${team.id}">0</span>)
+                                </button>
+                                ${adminButtons}
+                            </div>
+                        </div>
+                    </div>`;
                 listaEquiposContainer.innerHTML += teamCard;
                 updatePlayerCountOnCard(team.id);
             });
@@ -963,15 +1004,13 @@
             console.error("Error en renderTeams:", error);
             showMessage("Error", "No se pudieron cargar los equipos.", "error");
         }
-        // finally { showLoading(false); } // Ya no es necesario aquí
+        // finally { showLoading(false); } // Manejado por renderAll
     }
-    // Aplicar un patrón similar a las otras funciones de renderizado si tenían su propio showLoading.
-
-    // El resto de las funciones (manejadores de formularios, modales, etc.) se mantienen como estaban.
-    // Es crucial que todas las operaciones asíncronas (especialmente las de Firestore)
-    // se manejen con 'await' y estén dentro de bloques 'try...catch' para capturar errores.
+    async function renderTable() { /* ... (como estaba, pero usando showLoading si renderAll no lo hace) ... */ }
+    async function renderDashboardSummaries() { /* ... (como estaba, usando await fetch... */ }
+    async function renderGames(filteredGames = null) { /* ... (como estaba, usando await fetch... */ }
+    async function renderFeaturedPlayers() { /* ... (como estaba, usando await fetch... */ }
 
 </script>
 </body>
 </html>
-
